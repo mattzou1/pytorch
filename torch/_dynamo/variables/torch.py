@@ -3126,6 +3126,26 @@ class TorchInGraphFunctionVariable(BaseTorchVariable):
         if self.torch_function_override_enabled(tx, args, kwargs):
             return dispatch_torch_function(tx, self, args, kwargs)
 
+        if self.value is torch.ops.aten.set or (
+            isinstance(self.value, torch._ops.OpOverload)
+            and self.value.overloadpacket is torch.ops.aten.set
+        ):
+            unimplemented(
+                gb_type="Unsupported direct torch.ops.aten.set call",
+                context=f"fn={self.value}, args={args}, kwargs={kwargs}",
+                explanation=(
+                    "Dynamo does not support tracing direct `torch.ops.aten.set` "
+                    "calls. Use `Tensor.set_(source)` for the source-tensor "
+                    "overload, or move the storage aliasing operation outside "
+                    "`torch.compile`. Direct `aten.set` aliases storage in ways "
+                    "that downstream functionalization cannot safely model."
+                ),
+                hints=[
+                    "Use `tensor.set_(source)` instead of direct `torch.ops.aten.set`.",
+                    *graph_break_hints.SUPPORTABLE,
+                ],
+            )
+
         if self.can_constant_fold_through() and check_unspec_or_constant_args(
             args, kwargs
         ):
