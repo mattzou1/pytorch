@@ -125,6 +125,7 @@ def gemm_node(
 
 
 def _cute_arg(value: Any, env: dict[torch.fx.Node, Any]) -> Any:
+    """Translate FX node references and constants into CuTeDSL epilogue values."""
     if isinstance(value, torch.fx.Node):
         if value in env:
             return env[value]
@@ -165,8 +166,11 @@ def _cute_call(target: Any, args: tuple[Any, ...], kwargs: dict[str, Any]) -> An
 
 
 def materialize_flex_gemm_epilogue(
-    graph_module: torch.fx.GraphModule, gemm_op: torch._ops.OpOverload
+    graph_module: torch.fx.GraphModule,
+    gemm_op: torch._ops.OpOverload,
+    epilogue_arg_placeholders: tuple[torch.fx.Node, ...] = (),
 ) -> tuple[str, str]:
+    """Build the generated CuTeDSL epilogue callable from the traced FX body."""
     gemm = gemm_node(graph_module, gemm_op)
     output = output_node(graph_module)
     kernel = FlexGemmCuteDSLKernel()
@@ -175,6 +179,10 @@ def materialize_flex_gemm_epilogue(
             "acc", ValueRanges.unknown(), dtype=torch.float32, shape=(1,)
         )
     }
+    for index, node in enumerate(epilogue_arg_placeholders):
+        env[node] = CuteDSLCSEVariable(
+            f"aux{index}", ValueRanges.unknown(), dtype=torch.float32, shape=(1,)
+        )
 
     with V.set_kernel_handler(kernel), V.set_ops_handler(FlexGemmCuteDSLOpOverrides()):
         for node in graph_module.graph.nodes:
@@ -197,12 +205,14 @@ def materialize_flex_gemm_epilogue(
     body = "\n".join(f"    {line}" for line in kernel.body.lines)
     if body:
         body += "\n"
+    aux_args = [f"aux{index}" for index in range(len(epilogue_arg_placeholders))]
+    epilogue_params = ", ".join(["acc", *aux_args])
     return (
         name,
         "import cutlass\n"
         "import cutlass.cute as cute\n"
         "import operator\n"
         "from cutlass._mlir.dialects import math as mlir_math\n\n"
-        f"@cute.jit\ndef {name}(acc):\n"
+        f"@cute.jit\ndef {name}({epilogue_params}):\n"
         f"{body}    return {_cute_arg(output, env)}\n",
     )
