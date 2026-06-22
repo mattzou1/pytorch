@@ -63,7 +63,10 @@ from .sets import SetVariable
 
 if TYPE_CHECKING:
     from torch._dynamo.codegen import PyCodegen
-    from torch._dynamo.symbolic_convert import InstructionTranslator
+    from torch._dynamo.symbolic_convert import (
+        InstructionTranslator,
+        InstructionTranslatorBase,
+    )
 
     from .functions import UserFunctionVariable
 
@@ -728,7 +731,7 @@ class ConstDictVariable(VariableTracker):
 
     def nb_or_impl(
         self,
-        tx: "InstructionTranslator",
+        tx: "InstructionTranslatorBase",
         other: VariableTracker,
         reverse: bool = False,
     ) -> VariableTracker:
@@ -742,7 +745,7 @@ class ConstDictVariable(VariableTracker):
 
     def nb_inplace_or_impl(
         self,
-        tx: "InstructionTranslator",
+        tx: "InstructionTranslatorBase",
         other: VariableTracker,
     ) -> VariableTracker:
         # ref: https://github.com/python/cpython/blob/3.13/Objects/dictobject.c#L4660-L4667

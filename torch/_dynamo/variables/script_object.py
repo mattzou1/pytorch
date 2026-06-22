@@ -59,7 +59,10 @@ from .user_defined import UserDefinedObjectVariable, UserDefinedVariable
 
 
 if TYPE_CHECKING:
-    from torch._dynamo.symbolic_convert import InstructionTranslator
+    from torch._dynamo.symbolic_convert import (
+        InstructionTranslator,
+        InstructionTranslatorBase,
+    )
 
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
@@ -107,7 +110,7 @@ class OpaqueObjectClassVariable(UserDefinedVariable):
         # allowing for proper validation and error handling
         return False
 
-    def hash_impl(self, tx: "InstructionTranslator") -> tuple[int, bool]:
+    def hash_impl(self, tx: "InstructionTranslatorBase") -> tuple[int, bool]:
         # OpaqueObjectClassVariable wraps the CLASS, not an instance.
         # Classes are always hashable in CPython (type.__hash__ = object.__hash__).
         return hash(self.value), False
@@ -537,7 +540,7 @@ class TorchScriptObjectVariable(UserDefinedObjectVariable):
             return self.value
         return super().as_python_constant()
 
-    def hash_impl(self, tx: "InstructionTranslator") -> tuple[int, bool]:
+    def hash_impl(self, tx: "InstructionTranslatorBase") -> tuple[int, bool]:
         from ..exc import raise_type_error
 
         real_obj = self.as_python_constant()

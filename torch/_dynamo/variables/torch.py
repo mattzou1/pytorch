@@ -120,7 +120,10 @@ except ModuleNotFoundError:
 
 
 if TYPE_CHECKING:
-    from torch._dynamo.symbolic_convert import InstructionTranslator
+    from torch._dynamo.symbolic_convert import (
+        InstructionTranslator,
+        InstructionTranslatorBase,
+    )
     from torch._opaque_base import OpaqueBase
     from torch.utils._pytree import TreeSpec
 
@@ -597,7 +600,7 @@ class BaseTorchVariable(VariableTracker):
             return VariableTracker.build(tx, NotImplemented)
         return VariableTracker.build(tx, result)
 
-    def hash_impl(self, tx: "InstructionTranslator") -> tuple[int, bool]:
+    def hash_impl(self, tx: "InstructionTranslatorBase") -> tuple[int, bool]:
         return hash(self.value), False
 
     def call_obj_hasattr(

@@ -35,7 +35,10 @@ from .base import VariableTracker
 
 
 if TYPE_CHECKING:
-    from torch._dynamo.symbolic_convert import InstructionTranslator
+    from torch._dynamo.symbolic_convert import (
+        InstructionTranslator,
+        InstructionTranslatorBase,
+    )
 
 
 class DistributedVariable(VariableTracker):
@@ -70,7 +73,7 @@ class DistributedVariable(VariableTracker):
         # check if the distributed package is available or not
         return torch.distributed.is_available()
 
-    def hash_impl(self, tx: "InstructionTranslator") -> tuple[int, bool]:
+    def hash_impl(self, tx: "InstructionTranslatorBase") -> tuple[int, bool]:
         return hash(self.value), False
 
     def is_python_equal(self, other: object) -> bool:
